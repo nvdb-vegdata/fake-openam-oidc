@@ -13,14 +13,8 @@ import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
-import javax.ws.rs.GET;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.HttpHeaders;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
+import javax.ws.rs.*;
+import javax.ws.rs.core.*;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.time.Instant;
@@ -53,10 +47,10 @@ public class FakeOpenAM {
     }
 
     @POST
+    @Consumes("application/x-www-form-urlencoded")
     @Produces(MediaType.APPLICATION_JSON)
     @Path("/oauth2/Employees/access_token")
-    public Response employeeAccessToken(@Context HttpHeaders headers, Map<String, String> data) throws JOSEException {
-        String username = data.get("username");
+    public Response employeeAccessToken(@Context HttpHeaders headers, @FormParam("username") String username) throws JOSEException {
         if(notValidAuth(headers) || username == null || username.isEmpty()) {
             return Response.status(Response.Status.UNAUTHORIZED).build();
         }
@@ -64,30 +58,20 @@ public class FakeOpenAM {
         return getResponse(username, this.rsaJWKemployee, issuerBase + "/oauth2/Employees");
     }
 
-    private Response getResponse(String username, RSAKey rsaJWKemployee, String issuer) throws JOSEException {
-        String jwt = jwt(username, rsaJWKemployee, issuer);
-        Map<String, String> response = new HashMap<>();
-        response.put("id_token", jwt);
-        response.put("access_token", jwt);
-        response.put("refresh_token", jwt);
-        response.put("token_type", "bearer");
-        return Response.ok(response).build();
-    }
-
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     @Path("/oauth2/Employees/connect/jwk_uri")
     public Response employeeJWK(@Context HttpHeaders headers) {
         return Response.ok(
-                toJWK(rsaJWKemployee)
+                toJWK(rsaJWKemployee), MediaType.APPLICATION_JSON_TYPE
         ).build();
     }
 
     @POST
+    @Consumes("application/x-www-form-urlencoded")
     @Produces(MediaType.APPLICATION_JSON)
     @Path("/oauth2/WSClients_Int/access_token")
-    public Response serviceAccountAccessToken(@Context HttpHeaders headers, Map<String, String> data) throws JOSEException {
-        String username = data.get("username");
+    public Response serviceAccountAccessToken(@Context HttpHeaders headers, @FormParam("username") String username) throws JOSEException {
         if(notValidAuth(headers)) return Response.status(Response.Status.UNAUTHORIZED).build();
 
         return getResponse(username, this.rsaJWKserviceAccount, issuerBase + "/oauth2/WSClients_Int");
@@ -99,8 +83,20 @@ public class FakeOpenAM {
     @Path("/oauth2/WSClients_Int/connect/jwk_uri")
     public Response serviceAccountJWK(@Context HttpHeaders headers) {
         return Response.ok(
-                toJWK(rsaJWKserviceAccount)
+                toJWK(rsaJWKserviceAccount), MediaType.APPLICATION_JSON_TYPE
         ).build();
+    }
+
+    private Response getResponse(String username, RSAKey rsaJWKemployee, String issuer) throws JOSEException {
+        String jwt = jwt(username, rsaJWKemployee, issuer);
+        Map<String, String> response = new HashMap<>();
+        response.put("id_token", jwt);
+        response.put("access_token", jwt);
+        response.put("refresh_token", jwt);
+        response.put("token_type", "bearer");
+        return Response
+                .ok(response, MediaType.APPLICATION_JSON_TYPE)
+                .build();
     }
 
     private String jwt(String username, RSAKey rsaJWK, String issuer) throws JOSEException {

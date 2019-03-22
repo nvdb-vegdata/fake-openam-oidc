@@ -50,10 +50,6 @@
       <version>6.5</version>
     </dependency>
 
-    <dependency>
-      <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-resteasy-jsonb</artifactId>
-    </dependency>
   </dependencies>
   <build>
     <plugins>
